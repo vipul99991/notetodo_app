@@ -50,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
       default:
         return Colors.grey.shade200;
     }
+
+    // something random
   }
 
   @override
