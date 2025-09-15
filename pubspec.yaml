@@ -1,18 +1,28 @@
 name: notetodo_app
-description: A simple Note To-Do Flutter app
-
+description: A Note + Todo App
 publish_to: 'none'
 
 environment:
-  sdk: ">=2.18.0 <3.0.0"
+  sdk: ">=2.19.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  sqflite: ^2.3.0
-  path_provider: ^2.1.2
+
+  # Database
+  sqflite: ^2.2.8+4
   path: ^1.8.3
+
+  # Lottie animation
+  lottie: ^2.7.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/lottie/loading.json
+`
