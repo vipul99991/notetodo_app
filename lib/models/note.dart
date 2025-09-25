@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Note {
   final String id;
   final String title;
@@ -5,6 +7,8 @@ class Note {
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isFavorite;
+  final String tag; // e.g., 'Work', 'Personal'
+  final Color color; // e.g., Colors.yellow
 
   Note({
     required this.id,
@@ -13,5 +17,7 @@ class Note {
     required this.createdAt,
     required this.updatedAt,
     this.isFavorite = false,
+    this.tag = 'General',
+    this.color = Colors.white,
   });
 }

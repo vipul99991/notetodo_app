@@ -1,12 +1,10 @@
 import '../models/note.dart';
-import 'package:flutter/material.dart'; // Needed for DateTimeRange
+import 'package:flutter/material.dart';
 
 class NoteService {
-  // Filter by date
   static List<Note> filterByDate(List<Note> notes, String filterType,
       {DateTimeRange? customRange}) {
     final now = DateTime.now();
-
     switch (filterType) {
       case 'today':
         return notes
@@ -15,17 +13,14 @@ class NoteService {
                 n.createdAt.month == now.month &&
                 n.createdAt.year == now.year)
             .toList();
-
       case 'last7days':
         final weekAgo = now.subtract(const Duration(days: 7));
         return notes.where((n) => n.createdAt.isAfter(weekAgo)).toList();
-
       case 'thismonth':
         return notes
             .where((n) =>
                 n.createdAt.month == now.month && n.createdAt.year == now.year)
             .toList();
-
       case 'custom':
         if (customRange != null) {
           return notes
@@ -37,13 +32,11 @@ class NoteService {
               .toList();
         }
         return notes;
-
       default:
         return notes;
     }
   }
 
-  // Filter by search query
   static List<Note> filterBySearch(List<Note> notes, String query) {
     return notes
         .where((n) =>
@@ -52,8 +45,19 @@ class NoteService {
         .toList();
   }
 
-  // Filter favorites
   static List<Note> filterFavorites(List<Note> notes) {
     return notes.where((n) => n.isFavorite).toList();
+  }
+
+  // New: Filter by tag
+  static List<Note> filterByTag(List<Note> notes, String tag) {
+    if (tag == 'All') return notes;
+    return notes.where((n) => n.tag == tag).toList();
+  }
+
+  // New: Filter by color
+  static List<Note> filterByColor(List<Note> notes, Color color) {
+    if (color == Colors.transparent) return notes; // All colors
+    return notes.where((n) => n.color == color).toList();
   }
 }
