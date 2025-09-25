@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/note_service.dart' as note_service;
+import '../widgets/note_card.dart';
+import '../widgets/filter_bar.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -13,13 +15,15 @@ class _NotesScreenState extends State<NotesScreen> {
   List<Note> allNotes = [];
   List<Note> filteredNotes = [];
 
-  String selectedDateFilter = 'all';
   String searchQuery = '';
+  String selectedTag = 'All';
+  Color selectedColor = Colors.transparent;
   bool showFavorites = false;
   DateTimeRange? customRange;
 
-  String selectedTag = 'All';
-  Color selectedColor = Colors.transparent;
+  // Multi-select
+  Set<String> selectedNoteIds = {};
+  bool isMultiSelectMode = false;
 
   final List<String> tags = ['All', 'Work', 'Personal', 'Shopping', 'Other'];
   final List<Color> colors = [
@@ -33,6 +37,10 @@ class _NotesScreenState extends State<NotesScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeNotes();
+  }
+
+  void _initializeNotes() {
     allNotes = [
       Note(
         id: '1',
@@ -64,14 +72,14 @@ class _NotesScreenState extends State<NotesScreen> {
         color: Colors.red,
       ),
     ];
-    filteredNotes = allNotes;
+    filteredNotes = List.from(allNotes);
   }
 
   void applyFilters() {
     List<Note> notes = allNotes;
 
-    if (selectedDateFilter != 'all') {
-      notes = note_service.NoteService.filterByDate(notes, selectedDateFilter,
+    if (customRange != null) {
+      notes = note_service.NoteService.filterByDate(notes, 'custom',
           customRange: customRange);
     }
     if (showFavorites) notes = note_service.NoteService.filterFavorites(notes);
@@ -80,10 +88,149 @@ class _NotesScreenState extends State<NotesScreen> {
     if (selectedTag != 'All')
       notes = note_service.NoteService.filterByTag(notes, selectedTag);
     if (selectedColor != Colors.transparent)
-      notes = note_service.NoteService.filterByColor(notes, selectedColor);
+      notes = note_service.NoteService.filterByColor(notes, selectedColor as note_service.Color);
 
     setState(() {
       filteredNotes = notes;
+    });
+  }
+
+  void toggleSelectNote(String id) {
+    setState(() {
+      if (selectedNoteIds.contains(id)) {
+        selectedNoteIds.remove(id);
+      } else {
+        selectedNoteIds.add(id);
+      }
+      isMultiSelectMode = selectedNoteIds.isNotEmpty;
+    });
+  }
+
+  void deleteSelectedNotes() {
+    setState(() {
+      allNotes.removeWhere((note) => selectedNoteIds.contains(note.id));
+      selectedNoteIds.clear();
+      isMultiSelectMode = false;
+      applyFilters();
+    });
+  }
+
+  void addOrEditNote({Note? note}) {
+    final titleController = TextEditingController(text: note?.title ?? '');
+    final contentController = TextEditingController(text: note?.content ?? '');
+    String selectedTagDialog = note?.tag ?? 'Work';
+    Color selectedColorDialog = note?.color ?? Colors.yellow;
+    bool isFavoriteDialog = note?.isFavorite ?? false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(note == null ? "Add Note" : "Edit Note",
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(labelText: "Title")),
+                  TextField(
+                      controller: contentController,
+                      decoration: const InputDecoration(labelText: "Content")),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: selectedTagDialog,
+                    items: tags
+                        .where((t) => t != 'All')
+                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                        .toList(),
+                    onChanged: (v) => selectedTagDialog = v ?? 'Work',
+                    decoration: const InputDecoration(labelText: "Tag"),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    children:
+                        colors.where((c) => c != Colors.transparent).map((c) {
+                      return GestureDetector(
+                        onTap: () => setState(() => selectedColorDialog = c),
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: c,
+                            shape: BoxShape.circle,
+                            border: selectedColorDialog == c
+                                ? Border.all(width: 2, color: Colors.black)
+                                : null,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Text("Favorite: "),
+                      Checkbox(
+                          value: isFavoriteDialog,
+                          onChanged: (v) =>
+                              setState(() => isFavoriteDialog = v ?? false)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      final newNote = Note(
+                        id: note?.id ??
+                            DateTime.now().millisecondsSinceEpoch.toString(),
+                        title: titleController.text,
+                        content: contentController.text,
+                        createdAt: note?.createdAt ?? DateTime.now(),
+                        updatedAt: DateTime.now(),
+                        isFavorite: isFavoriteDialog,
+                        tag: selectedTagDialog,
+                        color: selectedColorDialog,
+                      );
+
+                      setState(() {
+                        if (note == null) {
+                          allNotes.add(newNote);
+                        } else {
+                          final index =
+                              allNotes.indexWhere((n) => n.id == note.id);
+                          allNotes[index] = newNote;
+                        }
+                        applyFilters();
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: const Text("Save"),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void deleteNote(Note note) {
+    setState(() {
+      allNotes.removeWhere((n) => n.id == note.id);
+      applyFilters();
     });
   }
 
@@ -101,122 +248,9 @@ class _NotesScreenState extends State<NotesScreen> {
     if (picked != null) {
       setState(() {
         customRange = picked;
-        selectedDateFilter = 'custom';
       });
       applyFilters();
     }
-  }
-
-  Future<void> openNoteDialog({Note? note}) async {
-    final titleController = TextEditingController(text: note?.title ?? '');
-    final contentController = TextEditingController(text: note?.content ?? '');
-    String selectedTagDialog = note?.tag ?? 'Work';
-    Color selectedColorDialog = note?.color ?? Colors.yellow;
-    bool isFavoriteDialog = note?.isFavorite ?? false;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(note == null ? "Add Note" : "Edit Note"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: "Title"),
-                ),
-                TextField(
-                  controller: contentController,
-                  decoration: const InputDecoration(labelText: "Content"),
-                ),
-                const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: selectedTagDialog,
-                  items: tags
-                      .where((t) => t != 'All')
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (v) => selectedTagDialog = v ?? 'Work',
-                  decoration: const InputDecoration(labelText: "Tag"),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  children:
-                      colors.where((c) => c != Colors.transparent).map((c) {
-                    return GestureDetector(
-                      onTap: () => setState(() => selectedColorDialog = c),
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: c,
-                          shape: BoxShape.circle,
-                          border: selectedColorDialog == c
-                              ? Border.all(width: 2, color: Colors.black)
-                              : null,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Text("Favorite: "),
-                    Checkbox(
-                      value: isFavoriteDialog,
-                      onChanged: (v) =>
-                          setState(() => isFavoriteDialog = v ?? false),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel")),
-            ElevatedButton(
-              onPressed: () {
-                final newNote = Note(
-                  id: note?.id ??
-                      DateTime.now().millisecondsSinceEpoch.toString(),
-                  title: titleController.text,
-                  content: contentController.text,
-                  createdAt: note?.createdAt ?? DateTime.now(),
-                  updatedAt: DateTime.now(),
-                  isFavorite: isFavoriteDialog,
-                  tag: selectedTagDialog,
-                  color: selectedColorDialog,
-                );
-
-                setState(() {
-                  if (note == null) {
-                    allNotes.add(newNote);
-                  } else {
-                    final index = allNotes.indexWhere((n) => n.id == note.id);
-                    allNotes[index] = newNote;
-                  }
-                });
-                applyFilters();
-                Navigator.pop(context);
-              },
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void deleteNote(Note note) {
-    setState(() {
-      allNotes.removeWhere((n) => n.id == note.id);
-      applyFilters();
-    });
   }
 
   @override
@@ -225,6 +259,9 @@ class _NotesScreenState extends State<NotesScreen> {
       appBar: AppBar(
         title: const Text("My Notes"),
         actions: [
+          if (isMultiSelectMode)
+            IconButton(
+                icon: const Icon(Icons.delete), onPressed: deleteSelectedNotes),
           IconButton(
             icon: Icon(showFavorites ? Icons.star : Icons.star_border),
             onPressed: () {
@@ -238,11 +275,10 @@ class _NotesScreenState extends State<NotesScreen> {
                 await pickCustomDateRange();
               } else {
                 setState(() {
-                  selectedDateFilter = value;
                   customRange = null;
                 });
-                applyFilters();
               }
+              applyFilters();
             },
             icon: const Icon(Icons.filter_list),
             itemBuilder: (context) => [
@@ -258,131 +294,58 @@ class _NotesScreenState extends State<NotesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => openNoteDialog(),
+        onPressed: () => addOrEditNote(),
         child: const Icon(Icons.add),
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "Search notes...",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) {
-                setState(() => searchQuery = value);
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: FilterBar(
+              searchQuery: searchQuery,
+              onSearchChanged: (v) {
+                searchQuery = v;
+                applyFilters();
+              },
+              tags: tags,
+              selectedTag: selectedTag,
+              onTagSelected: (tag) {
+                selectedTag = tag;
+                applyFilters();
+              },
+              colors: colors,
+              selectedColor: selectedColor,
+              onColorSelected: (color) {
+                selectedColor = color;
                 applyFilters();
               },
             ),
           ),
-
-          // Tag Filter
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: tags.length,
-              itemBuilder: (context, index) {
-                final tag = tags[index];
-                final selected = tag == selectedTag;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: ChoiceChip(
-                    label: Text(tag),
-                    selected: selected,
-                    onSelected: (_) {
-                      setState(() => selectedTag = tag);
-                      applyFilters();
-                    },
-                  ),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final note = filteredNotes[index];
+                return NoteCard(
+                  note: note,
+                  isSelected: selectedNoteIds.contains(note.id),
+                  onTap: () {
+                    if (isMultiSelectMode) {
+                      toggleSelectNote(note.id);
+                    } else {
+                      addOrEditNote(note: note);
+                    }
+                  },
+                  onLongPress: () => toggleSelectNote(note.id),
+                  onEdit: () => addOrEditNote(note: note),
+                  onDelete: () => deleteNote(note),
                 );
               },
+              childCount: filteredNotes.length,
             ),
-          ),
-
-          // Color Filter
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: colors.length,
-              itemBuilder: (context, index) {
-                final color = colors[index];
-                final selected = color == selectedColor;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => selectedColor = color);
-                      applyFilters();
-                    },
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: color == Colors.transparent
-                            ? Colors.grey[300]
-                            : color,
-                        shape: BoxShape.circle,
-                        border: selected
-                            ? Border.all(color: Colors.black, width: 2)
-                            : null,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // Notes List
-          Expanded(
-            child: filteredNotes.isEmpty
-                ? const Center(
-                    child:
-                        Text("No notes found.", style: TextStyle(fontSize: 18)))
-                : ListView.builder(
-                    itemCount: filteredNotes.length,
-                    itemBuilder: (context, index) {
-                      final note = filteredNotes[index];
-                      return Card(
-                        color: note.color,
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          title: Text(note.title,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(note.content,
-                              maxLines: 2, overflow: TextOverflow.ellipsis),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (note.isFavorite)
-                                const Icon(Icons.star, color: Colors.yellow),
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => openNoteDialog(note: note),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => deleteNote(note),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
           ),
         ],
       ),
     );
   }
+  
+  Widget? NoteCard({required Note note, required bool isSelected, required Null Function() onTap, required void Function() onLongPress, required void Function() onEdit, required void Function() onDelete}) {}
 }

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
 class Note {
-  final String id;
-  final String title;
-  final String content;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final bool isFavorite;
-  final String tag; // e.g., 'Work', 'Personal'
-  final Color color; // e.g., Colors.yellow
+  String id;
+  String title;
+  String content;
+  DateTime createdAt;
+  DateTime updatedAt;
+  bool isFavorite;
+  bool isPinned;
+  bool isArchived;
+  String tag;
+  Color color;
 
   Note({
     required this.id,
@@ -17,7 +19,9 @@ class Note {
     required this.createdAt,
     required this.updatedAt,
     this.isFavorite = false,
-    this.tag = 'General',
-    this.color = Colors.white,
+    this.isPinned = false,
+    this.isArchived = false,
+    this.tag = 'Work',
+    this.color = Colors.yellow,
   });
 }

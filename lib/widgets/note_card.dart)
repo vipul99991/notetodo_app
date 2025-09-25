@@ -3,16 +3,59 @@ import '../models/note.dart';
 
 class NoteCard extends StatelessWidget {
   final Note note;
-  const NoteCard({super.key, required this.note});
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
+
+  const NoteCard({
+    super.key,
+    required this.note,
+    required this.onEdit,
+    required this.onDelete,
+    this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: ListTile(
-        title: Text(note.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(note.content, maxLines: 2, overflow: TextOverflow.ellipsis),
-        trailing: note.isFavorite ? const Icon(Icons.star, color: Colors.yellow) : null,
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Hero(
+        tag: note.id,
+        child: Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 6,
+          shadowColor: Colors.black26,
+          color: isSelected ? Colors.blue.withOpacity(0.3) : note.color.withOpacity(0.2),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            title: Text(note.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(note.content, maxLines: 3, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(12)),
+                  child: Text(note.tag, style: const TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (note.isFavorite) const Icon(Icons.star, color: Colors.yellow),
+                IconButton(icon: const Icon(Icons.edit), onPressed: onEdit),
+                IconButton(icon: const Icon(Icons.delete), onPressed: onDelete),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
