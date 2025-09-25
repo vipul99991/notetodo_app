@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,13 +20,26 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Onboarding App',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: SplashScreen(
-        nextScreen: seenOnboarding
-            ? const HomeScreen()
-            : const OnboardingScreen(),
+      title: 'NoteTodo App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: seenOnboarding ? const HomeScreen() : const OnboardingScreen(),
+    );
+  }
+}
+
+class NotesScreen extends StatelessWidget {
+  const NotesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notes'),
+      ),
+      body: const Center(
+        child: Text('This is the notes screen.'),
       ),
     );
   }

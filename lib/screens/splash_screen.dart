@@ -3,10 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
 
 class SplashScreen extends StatefulWidget {
-  Widget nextScreen;
-  int duration;
+  final Widget nextScreen;
+  final int duration;
 
-  SplashScreen({required this.nextScreen, this.duration = 3, super.key});
+  const SplashScreen({required this.nextScreen, this.duration = 3, super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
