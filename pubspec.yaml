@@ -1,27 +1,25 @@
 name: notetodo_app
-description: A Note + Todo App
-publish_to: 'none'
+description: Flutter onboarding app without Lottie
+
+publish_to: "none"
 
 environment:
-  sdk: ">=2.19.0 <4.0.0"
+  sdk: ">=2.18.0 <3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-
-  # Database
-  sqflite: ^2.2.8+4
-  path: ^1.8.3
-
-  # Lottie animation
-  lottie: ^2.7.0
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+  flutter_svg: ^2.2.1
+  lottie: ^3.3.2
+  shared_preferences: ^2.1.1
+  smooth_page_indicator: ^1.0.0
+syncfusion_flutter_pdfviewer: ^20.4.48
+provider: ^6.0.5
+open_file: ^3.2.1
+image_picker: ^0.8.7+4
 
 flutter:
   uses-material-design: true
-
   assets:
-    - assets/lottie/loading.json
+    - assets/images/logo.svg
+    - assets/animations/loading.json
