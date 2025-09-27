@@ -1,9 +1,29 @@
 import 'package:flutter/material.dart';
-import '../models/note.dart';
-import '../services/note_service.dart' as note_service;
-import '../widgets/note_card.dart';
-import '../widgets/filter_bar.dart';
 
+// --- Data Model ---
+class Note {
+  final String id;
+  final String title;
+  final String content;
+  final DateTime createdAt;
+  DateTime updatedAt;
+  bool isFavorite;
+  String tag;
+  Color color;
+
+  Note({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.createdAt,
+    required this.updatedAt,
+    this.isFavorite = false,
+    required this.tag,
+    required this.color,
+  });
+}
+
+// --- Main Screen Widget ---
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
 
@@ -20,18 +40,20 @@ class _NotesScreenState extends State<NotesScreen> {
   Color selectedColor = Colors.transparent;
   bool showFavorites = false;
   DateTimeRange? customRange;
+  String dateFilter = 'all';
 
   // Multi-select
   Set<String> selectedNoteIds = {};
-  bool isMultiSelectMode = false;
+  bool get isMultiSelectMode => selectedNoteIds.isNotEmpty;
 
   final List<String> tags = ['All', 'Work', 'Personal', 'Shopping', 'Other'];
   final List<Color> colors = [
     Colors.transparent,
-    Colors.yellow,
-    Colors.green,
-    Colors.blue,
-    Colors.red
+    Colors.blue.shade100,
+    Colors.red.shade100,
+    Colors.green.shade100,
+    Colors.yellow.shade100,
+    Colors.purple.shade100,
   ];
 
   @override
@@ -41,57 +63,54 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   void _initializeNotes() {
+    // Sample data
     allNotes = [
-      Note(
-        id: '1',
-        title: 'Flutter Notes',
-        content: 'Learn state management',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        updatedAt: DateTime.now(),
-        isFavorite: true,
-        tag: 'Work',
-        color: Colors.yellow,
-      ),
-      Note(
-        id: '2',
-        title: 'Shopping List',
-        content: 'Milk, Eggs, Bread',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        tag: 'Shopping',
-        color: Colors.green,
-      ),
-      Note(
-        id: '3',
-        title: 'Work Tasks',
-        content: 'Finish project report',
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        updatedAt: DateTime.now(),
-        isFavorite: true,
-        tag: 'Work',
-        color: Colors.red,
-      ),
+      Note(id: '1', title: 'Work Meeting', content: 'Discuss Q3 roadmap.', createdAt: DateTime.now().subtract(const Duration(days: 1)), updatedAt: DateTime.now(), tag: 'Work', color: colors[1], isFavorite: true),
+      Note(id: '2', title: 'Groceries', content: 'Milk, Bread, Eggs.', createdAt: DateTime.now().subtract(const Duration(days: 3)), updatedAt: DateTime.now(), tag: 'Shopping', color: colors[2]),
+      Note(id: '3', title: 'Flutter Project', content: 'Fix bugs in notes screen.', createdAt: DateTime.now(), updatedAt: DateTime.now(), tag: 'Personal', color: colors[3]),
+      Note(id: '4', title: 'Dentist Appointment', content: 'Scheduled for next week.', createdAt: DateTime.now().subtract(const Duration(days: 8)), updatedAt: DateTime.now(), tag: 'Personal', color: colors[4]),
     ];
-    filteredNotes = List.from(allNotes);
+    applyFilters();
   }
 
   void applyFilters() {
-    List<Note> notes = allNotes;
+    List<Note> tempNotes = List.from(allNotes);
 
-    if (customRange != null) {
-      notes = note_service.NoteService.filterByDate(notes, 'custom',
-          customRange: customRange);
+    // Search
+    if (searchQuery.isNotEmpty) {
+      tempNotes = tempNotes.where((note) => note.title.toLowerCase().contains(searchQuery.toLowerCase()) || note.content.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     }
-    if (showFavorites) notes = note_service.NoteService.filterFavorites(notes);
-    if (searchQuery.isNotEmpty)
-      notes = note_service.NoteService.filterBySearch(notes, searchQuery);
-    if (selectedTag != 'All')
-      notes = note_service.NoteService.filterByTag(notes, selectedTag);
-    if (selectedColor != Colors.transparent)
-      notes = note_service.NoteService.filterByColor(notes, selectedColor as note_service.Color);
+
+    // Tag
+    if (selectedTag != 'All') {
+      tempNotes = tempNotes.where((note) => note.tag == selectedTag).toList();
+    }
+
+    // Color
+    if (selectedColor != Colors.transparent) {
+      tempNotes = tempNotes.where((note) => note.color == selectedColor).toList();
+    }
+
+    // Favorites
+    if (showFavorites) {
+      tempNotes = tempNotes.where((note) => note.isFavorite).toList();
+    }
+
+    // Date
+    final now = DateTime.now();
+    if (dateFilter == 'today') {
+      tempNotes = tempNotes.where((note) => note.createdAt.year == now.year && note.createdAt.month == now.month && note.createdAt.day == now.day).toList();
+    } else if (dateFilter == 'last7days') {
+      final sevenDaysAgo = now.subtract(const Duration(days: 7));
+      tempNotes = tempNotes.where((note) => note.createdAt.isAfter(sevenDaysAgo)).toList();
+    } else if (dateFilter == 'thismonth') {
+      tempNotes = tempNotes.where((note) => note.createdAt.year == now.year && note.createdAt.month == now.month).toList();
+    } else if (dateFilter == 'custom' && customRange != null) {
+      tempNotes = tempNotes.where((note) => note.createdAt.isAfter(customRange!.start) && note.createdAt.isBefore(customRange!.end.add(const Duration(days: 1)))).toList();
+    }
 
     setState(() {
-      filteredNotes = notes;
+      filteredNotes = tempNotes;
     });
   }
 
@@ -102,7 +121,6 @@ class _NotesScreenState extends State<NotesScreen> {
       } else {
         selectedNoteIds.add(id);
       }
-      isMultiSelectMode = selectedNoteIds.isNotEmpty;
     });
   }
 
@@ -110,61 +128,44 @@ class _NotesScreenState extends State<NotesScreen> {
     setState(() {
       allNotes.removeWhere((note) => selectedNoteIds.contains(note.id));
       selectedNoteIds.clear();
-      isMultiSelectMode = false;
       applyFilters();
     });
   }
 
   void addOrEditNote({Note? note}) {
-    final titleController = TextEditingController(text: note?.title ?? '');
-    final contentController = TextEditingController(text: note?.content ?? '');
-    String selectedTagDialog = note?.tag ?? 'Work';
-    Color selectedColorDialog = note?.color ?? Colors.yellow;
+    final titleController = TextEditingController(text: note?.title);
+    final contentController = TextEditingController(text: note?.content);
+    String selectedTagDialog = note?.tag ?? 'Personal';
+    Color selectedColorDialog = note?.color ?? colors[1];
     bool isFavoriteDialog = note?.isFavorite ?? false;
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
-        return Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: Text(note == null ? "Add Note" : "Edit Note"),
+            content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(note == null ? "Add Note" : "Edit Note",
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold)),
+                  TextField(controller: titleController, decoration: const InputDecoration(labelText: "Title")),
                   const SizedBox(height: 10),
-                  TextField(
-                      controller: titleController,
-                      decoration: const InputDecoration(labelText: "Title")),
-                  TextField(
-                      controller: contentController,
-                      decoration: const InputDecoration(labelText: "Content")),
+                  TextField(controller: contentController, decoration: const InputDecoration(labelText: "Content"), maxLines: 5),
                   const SizedBox(height: 10),
-                  DropdownButtonFormField<String>(
+                  DropdownButton<String>(
                     value: selectedTagDialog,
-                    items: tags
-                        .where((t) => t != 'All')
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                        .toList(),
-                    onChanged: (v) => selectedTagDialog = v ?? 'Work',
-                    decoration: const InputDecoration(labelText: "Tag"),
+                    onChanged: (v) => setStateDialog(() => selectedTagDialog = v!),
+                    items: tags.where((t) => t != 'All').map((tag) => DropdownMenuItem(value: tag, child: Text(tag))).toList(),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
-                    children:
-                        colors.where((c) => c != Colors.transparent).map((c) {
+                    runSpacing: 8,
+                    children: colors.where((c) => c != Colors.transparent).map((c) {
                       return GestureDetector(
-                        onTap: () => setState(() => selectedColorDialog = c),
+                        onTap: () => setStateDialog(() => selectedColorDialog = c),
                         child: Container(
                           width: 30,
                           height: 30,
@@ -184,43 +185,46 @@ class _NotesScreenState extends State<NotesScreen> {
                     children: [
                       const Text("Favorite: "),
                       Checkbox(
-                          value: isFavoriteDialog,
-                          onChanged: (v) =>
-                              setState(() => isFavoriteDialog = v ?? false)),
+                        value: isFavoriteDialog,
+                        onChanged: (v) => setStateDialog(() => isFavoriteDialog = v!),
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      final newNote = Note(
-                        id: note?.id ??
-                            DateTime.now().millisecondsSinceEpoch.toString(),
-                        title: titleController.text,
-                        content: contentController.text,
-                        createdAt: note?.createdAt ?? DateTime.now(),
-                        updatedAt: DateTime.now(),
-                        isFavorite: isFavoriteDialog,
-                        tag: selectedTagDialog,
-                        color: selectedColorDialog,
-                      );
-
-                      setState(() {
-                        if (note == null) {
-                          allNotes.add(newNote);
-                        } else {
-                          final index =
-                              allNotes.indexWhere((n) => n.id == note.id);
-                          allNotes[index] = newNote;
-                        }
-                        applyFilters();
-                      });
-                      Navigator.pop(context);
-                    },
-                    child: const Text("Save"),
                   ),
                 ],
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final newNote = Note(
+                    id: note?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                    title: titleController.text,
+                    content: contentController.text,
+                    createdAt: note?.createdAt ?? DateTime.now(),
+                    updatedAt: DateTime.now(),
+                    tag: selectedTagDialog,
+                    color: selectedColorDialog,
+                    isFavorite: isFavoriteDialog,
+                  );
+
+                  setState(() {
+                    if (note == null) {
+                      allNotes.add(newNote);
+                    } else {
+                      final index = allNotes.indexWhere((n) => n.id == note.id);
+                      allNotes[index] = newNote;
+                    }
+                    applyFilters();
+                  });
+                  Navigator.pop(context);
+                },
+                child: const Text("Save"),
+              ),
+            ],
           ),
         );
       },
@@ -248,6 +252,7 @@ class _NotesScreenState extends State<NotesScreen> {
     if (picked != null) {
       setState(() {
         customRange = picked;
+        dateFilter = 'custom';
       });
       applyFilters();
     }
@@ -271,14 +276,16 @@ class _NotesScreenState extends State<NotesScreen> {
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
+              setState(() {
+                dateFilter = value;
+                customRange = null;
+              });
+
               if (value == 'custom') {
                 await pickCustomDateRange();
               } else {
-                setState(() {
-                  customRange = null;
-                });
+                applyFilters();
               }
-              applyFilters();
             },
             icon: const Icon(Icons.filter_list),
             itemBuilder: (context) => [
@@ -300,43 +307,112 @@ class _NotesScreenState extends State<NotesScreen> {
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: FilterBar(
-              searchQuery: searchQuery,
-              onSearchChanged: (v) {
-                searchQuery = v;
-                applyFilters();
-              },
-              tags: tags,
-              selectedTag: selectedTag,
-              onTagSelected: (tag) {
-                selectedTag = tag;
-                applyFilters();
-              },
-              colors: colors,
-              selectedColor: selectedColor,
-              onColorSelected: (color) {
-                selectedColor = color;
-                applyFilters();
-              },
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: "Search Notes",
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    searchQuery = value;
+                  });
+                  applyFilters();
+                },
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: tags.map((tag) {
+                        return FilterChip(
+                          label: Text(tag),
+                          selected: selectedTag == tag,
+                          onSelected: (selected) {
+                            setState(() {
+                              selectedTag = selected ? tag : 'All';
+                            });
+                            applyFilters();
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: colors.map((color) {
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedColor = selectedColor == color
+                            ? Colors.transparent
+                            : color;
+                      });
+                      applyFilters();
+                    },
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: selectedColor == color
+                            ? Border.all(width: 2, color: Colors.black)
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 final note = filteredNotes[index];
-                return NoteCard(
-                  note: note,
-                  isSelected: selectedNoteIds.contains(note.id),
-                  onTap: () {
-                    if (isMultiSelectMode) {
-                      toggleSelectNote(note.id);
-                    } else {
-                      addOrEditNote(note: note);
-                    }
-                  },
-                  onLongPress: () => toggleSelectNote(note.id),
-                  onEdit: () => addOrEditNote(note: note),
-                  onDelete: () => deleteNote(note),
+                return Card(
+                  margin: const EdgeInsets.all(8.0),
+                  child: ListTile(
+                    title: Text(note.title),
+                    subtitle: Text(note.content),
+                    trailing: Icon(
+                      note.isFavorite ? Icons.star : Icons.star_border,
+                      color: note.isFavorite ? Colors.yellow : null,
+                    ),
+                    onTap: () {
+                      if (isMultiSelectMode) {
+                        toggleSelectNote(note.id);
+                      } else {
+                        addOrEditNote(note: note);
+                      }
+                    },
+                    onLongPress: () => toggleSelectNote(note.id),
+                    leading: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: note.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
                 );
               },
               childCount: filteredNotes.length,
@@ -346,6 +422,4 @@ class _NotesScreenState extends State<NotesScreen> {
       ),
     );
   }
-  
-  Widget? NoteCard({required Note note, required bool isSelected, required Null Function() onTap, required void Function() onLongPress, required void Function() onEdit, required void Function() onDelete}) {}
 }

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 class FilterBar extends StatelessWidget {
   final String searchQuery;
-  final Function(String) onSearchChanged;
+  final ValueChanged<String> onSearchChanged;
   final List<String> tags;
   final String selectedTag;
-  final Function(String) onTagSelected;
+  final ValueChanged<String> onTagSelected;
   final List<Color> colors;
   final Color selectedColor;
-  final Function(Color) onColorSelected;
+  final ValueChanged<Color> onColorSelected;
 
   const FilterBar({
     super.key,
@@ -24,67 +24,66 @@ class FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: onSearchChanged,
             decoration: const InputDecoration(
-              hintText: "Search notes...",
+              labelText: 'Search',
               prefixIcon: Icon(Icons.search),
               border: OutlineInputBorder(),
             ),
-            onChanged: onSearchChanged,
           ),
-        ),
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: tags.length,
-            itemBuilder: (context, index) {
-              final tag = tags[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: ChoiceChip(
-                  label: Text(tag),
-                  selected: selectedTag == tag,
-                  onSelected: (_) => onTagSelected(tag),
-                ),
-              );
-            },
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: tags.length,
+              itemBuilder: (context, index) {
+                final tag = tags[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: ChoiceChip(
+                    label: Text(tag),
+                    selected: selectedTag == tag,
+                    onSelected: (_) => onTagSelected(tag),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: colors.length,
-            itemBuilder: (context, index) {
-              final color = colors[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: GestureDetector(
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: colors.length,
+              itemBuilder: (context, index) {
+                final color = colors[index];
+                return GestureDetector(
                   onTap: () => onColorSelected(color),
                   child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: color == Colors.transparent
-                          ? Colors.grey[300]
-                          : color,
+                      color: color == Colors.transparent ? Colors.grey[300] : color,
                       shape: BoxShape.circle,
                       border: selectedColor == color
-                          ? Border.all(color: Colors.black, width: 2)
+                          ? Border.all(width: 2, color: Colors.black)
                           : null,
                     ),
+                    child: color == Colors.transparent ? const Icon(Icons.format_color_reset, size: 18) : null,
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -12,7 +12,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    Center(child: Text("Home Page Content")),
+    const Center(child: Text("Home Page Content")),
     const NotesScreen(),
   ];
 
