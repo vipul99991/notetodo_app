@@ -1,16 +1,14 @@
-import 'package:flutter/material.dart';
-
 class Note {
-  String id;
+  final String id;
   String title;
   String content;
   DateTime createdAt;
   DateTime updatedAt;
   bool isFavorite;
   bool isPinned;
-  bool isArchived;
-  String tag;
-  Color color;
+  bool isDeleted;
+  String? folderId;
+  List<String> tags;
 
   Note({
     required this.id,
@@ -20,8 +18,8 @@ class Note {
     required this.updatedAt,
     this.isFavorite = false,
     this.isPinned = false,
-    this.isArchived = false,
-    this.tag = 'Work',
-    this.color = Colors.yellow,
+    this.isDeleted = false,
+    this.folderId,
+    this.tags = const [],
   });
 }

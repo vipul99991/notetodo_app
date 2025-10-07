@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:notetodo_app/screens/recycle_bin_screen.dart' hide NoteService;
+import 'package:notetodo_app/services/note_service.dart';
 import 'notes_screen.dart'; // only import this
 
 class HomeScreen extends StatefulWidget {
@@ -13,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const Center(child: Text("Home Page Content")),
-    const NotesScreen(),
+    NotesScreen(noteService: NoteService(), folderId: null,),
   ];
 
   void _onItemTapped(int index) {

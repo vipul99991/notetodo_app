@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/notes_screen.dart';
+import 'services/note_service.dart'; // <-- import NoteService
 
 void main() {
   runApp(const MyApp());
@@ -11,12 +12,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Notes',
-      theme: ThemeData.light(useMaterial3: true),
-      darkTheme: ThemeData.dark(useMaterial3: true),
-      themeMode: ThemeMode.system,
+      title: 'Notes App',
       debugShowCheckedModeBanner: false,
-      home: const NotesScreen(),
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: NotesScreen(
+        noteService: NoteService(), // <-- make sure NoteService class exists
+        folderId: null,
+      ),
     );
   }
 }
